@@ -131,12 +131,16 @@ static int active_period = 20000;
 static int wl_android_active_expired = 0;
 struct timer_list *wl_android_active_timer = NULL;
 extern int msm_otg_setclk( int on);
+#ifdef CONFIG_MSM8930_ONLY
+static int otg_clk_enabled = 0;
+#endif
 static int assoc_count_buff = 0;
 extern int sta_event_sent;
 
 #define TRAFFIC_SUPER_HIGH_WATER_MARK	2600
 #define TRAFFIC_HIGH_WATER_MARK			2300
 #define TRAFFIC_LOW_WATER_MARK			256
+#define TRAFFIC_OTG_WATER_MARK			540
 typedef enum traffic_ind {
 	TRAFFIC_STATS_NORMAL = 0,
 	TRAFFIC_STATS_HIGH,
@@ -155,6 +159,7 @@ struct msm_bus_scale_pdata *bus_scale_table = NULL;
 uint32_t bus_perf_client = 0;
 
 static int screen_off = 0;
+int sta_connected = 0;
 static int traffic_stats_flag = TRAFFIC_STATS_NORMAL;
 static unsigned long current_traffic_count = 0;
 static unsigned long last_traffic_count = 0;
@@ -449,7 +454,7 @@ static int wl_android_set_suspendopt(struct net_device *dev, char *command, int 
 		}
 	return ret;
 }
-
+int mIs_screen_off = 0;
 static int wl_android_set_suspendmode(struct net_device *dev, char *command, int total_len)
 {
 	int ret = 0;
@@ -460,7 +465,7 @@ static int wl_android_set_suspendmode(struct net_device *dev, char *command, int
 	suspend_flag = *(command + strlen(CMD_SETSUSPENDMODE) + 1) - '0';
 	if (suspend_flag != 0)
 		suspend_flag = 1;
-
+        mIs_screen_off = suspend_flag;
 #ifdef CUSTOMER_HW_ONE
 	if (suspend_flag == 1)
 		dhdcdc_wifiLock = 0;
@@ -917,7 +922,6 @@ wl_android_set_mac_address_filter(struct net_device *dev, const char* str)
 }
 #endif
 
-extern int msm_otg_setclk( int on);
 
 
 int wl_android_wifi_on(struct net_device *dev)
@@ -978,7 +982,6 @@ int wl_android_wifi_on(struct net_device *dev)
 			printf("%s: Failed to register BUS "
 					"scaling client!!\n", __func__);
 	}
-	msm_otg_setclk(1);
 exit:
 	mutex_unlock(&wl_wifionoff_mutex);
 #else
@@ -1036,7 +1039,6 @@ int wl_android_wifi_off(struct net_device *dev)
 	if (bus_perf_client)
 		msm_bus_scale_unregister_client(bus_perf_client);
 
-	msm_otg_setclk(0);
 	mutex_unlock(&wl_wifionoff_mutex);
 	bcm_mdelay(500);
 #else
@@ -2565,21 +2567,34 @@ void wlan_unlock_multi_core(struct net_device *dev)
 	wl_cfg80211_send_priv_event(dev, "PERF_UNLOCK");
 }
 
+void set_otg_clk(int lock){
+#ifdef CONFIG_MSM8930_ONLY
+    if(lock == otg_clk_enabled)
+        return;
+    printf("set_otg_clk otg clk with %d",lock);
+    otg_clk_enabled = lock;
+    msm_otg_setclk(lock);
+#else
+    return;
+#endif
+}
+
 void wl_android_traffic_monitor(struct net_device *dev)
 {
 	unsigned long rx_packets_count = 0;
 	unsigned long tx_packets_count = 0;
 	unsigned long traffic_diff = 0;
     unsigned long jiffies_diff = 0;
+    struct wl_priv *wl = wlcfg_drv_priv;
 
 	
 	dhd_get_txrx_stats(dev, &rx_packets_count, &tx_packets_count);
 	current_traffic_count = rx_packets_count + tx_packets_count;
 
-	if ((current_traffic_count >= last_traffic_count && jiffies > last_traffic_count_jiffies) || screen_off) {
+	if ((current_traffic_count >= last_traffic_count && jiffies > last_traffic_count_jiffies) || screen_off || !sta_connected) {
         
-        if (screen_off) {
-            printf("set traffic = 0 and relase performace lock when screen off");
+        if (screen_off || !sta_connected) {
+            printf("set traffic = 0 and relase performace lock when %s", screen_off? "screen off": "disconnected");
             traffic_diff = 0;
         }
         else {
@@ -2592,6 +2607,19 @@ void wl_android_traffic_monitor(struct net_device *dev)
                 traffic_diff = 0;
             }
         }
+
+		if (traffic_diff < TRAFFIC_LOW_WATER_MARK) {
+            if(wl && wl->p2p && wl->p2p->vif_created)
+                ;
+            else
+                set_otg_clk(0);
+		} else if (TRAFFIC_LOW_WATER_MARK <= traffic_diff && traffic_diff < TRAFFIC_OTG_WATER_MARK) {
+			
+			;
+		} else if (traffic_diff >= TRAFFIC_OTG_WATER_MARK) {
+            set_otg_clk(1);
+		}
+
         switch (traffic_stats_flag) {
         case TRAFFIC_STATS_NORMAL:
 			if (traffic_diff > TRAFFIC_HIGH_WATER_MARK) {

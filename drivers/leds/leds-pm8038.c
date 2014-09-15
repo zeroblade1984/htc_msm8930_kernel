@@ -779,7 +779,7 @@ static int __devinit init_wled(struct pm8xxx_led_data *led)
 	else
 		val |= WLED_EN_MASK;
 
-#if defined(CONFIG_MACH_DUMMY)
+#if defined(CONFIG_MACH_TC2)
 	
 	val = val & ~WLED_EN_MASK;
 #endif

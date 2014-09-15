@@ -556,7 +556,6 @@ static int vid_enc_open(struct inode *inode, struct file *file)
 	INFO(" msm_vidc_enc: Inside %s()", __func__);
 
 	mutex_lock(&vid_enc_device_p->lock);
-	keep_dig_voltage_low_in_idle(true);
 	start_cmd = 0;
 	stop_cmd = 0;
 	client_count = vcd_get_num_of_clients();
@@ -619,6 +618,9 @@ static int vid_enc_open(struct inode *inode, struct file *file)
 		mutex_unlock(&vid_enc_device_p->lock);
 		return rc;
 	}
+
+    keep_dig_voltage_low_in_idle(true);
+
 	file->private_data = client_ctx;
 	mutex_unlock(&vid_enc_device_p->lock);
 	return rc;
@@ -627,14 +629,16 @@ static int vid_enc_open(struct inode *inode, struct file *file)
 static int vid_enc_release(struct inode *inode, struct file *file)
 {
 	struct video_client_ctx *client_ctx = file->private_data;
-	INFO(" msm_vidc_enc: Inside %s()", __func__);
+	INFO("\n msm_vidc_enc: Inside %s()", __func__);
+	vidc_cleanup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT);
+	vidc_cleanup_addr_table(client_ctx, BUFFER_TYPE_INPUT);
 	keep_dig_voltage_low_in_idle(false);
 	vid_enc_close_client(client_ctx);
 	vidc_release_firmware();
 #ifndef USE_RES_TRACKER
 	vidc_disable_clk();
 #endif
-	INFO(" msm_vidc_enc: Return from %s()", __func__);
+	INFO("\n msm_vidc_enc: Return from %s()", __func__);
 	return 0;
 }
 

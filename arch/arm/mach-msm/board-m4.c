@@ -787,6 +787,9 @@ static struct htc_battery_platform_data htc_battery_pdev_data = {
 	.igauge.get_battery_id = pm8921_get_batt_id,
 	.igauge.get_battery_soc = pm8921_bms_get_batt_soc,
 	.igauge.get_battery_cc = pm8921_bms_get_batt_cc,
+	.igauge.store_battery_data = pm8921_bms_store_battery_data_emmc,
+	.igauge.store_battery_ui_soc = pm8921_bms_store_battery_ui_soc,
+	.igauge.get_battery_ui_soc = pm8921_bms_get_battery_ui_soc,
 	.igauge.is_battery_temp_fault = pm8921_is_batt_temperature_fault,
 	.igauge.is_battery_full = pm8921_is_batt_full,
 	.igauge.get_attr_text = pm8921_gauge_get_attr_text,
@@ -2051,7 +2054,7 @@ void m4_add_usb_devices(void)
 
 	if ( machine_is_m4_ul() )
 		android_usb_pdata.product_id = 0x0dcd;
-	else if ( 0)
+	else if ( machine_is_m4_u())
 		android_usb_pdata.product_id = 0x0dce;
 
 	android_usb_pdata.products[0].product_id =
@@ -3954,7 +3957,7 @@ static void __init register_i2c_devices(void)
 #endif
 
 	
-	if (machine_is_msm8930_cdp() || machine_is_msm8627_cdp() || machine_is_m4_ul() || 0)
+	if (machine_is_msm8930_cdp() || machine_is_msm8627_cdp() || machine_is_m4_ul() || machine_is_m4_u())
 		mach_mask = I2C_SURF;
 	else if (machine_is_msm8930_fluid())
 		mach_mask = I2C_FLUID;
@@ -4154,3 +4157,15 @@ MACHINE_START(M4_UL, "m4_ul")
 	.restart = msm_restart,
 MACHINE_END
 
+MACHINE_START(M4_U, "m4_u")
+	.fixup = m4_fixup,
+	.map_io = m4_map_io,
+	.reserve = m4_reserve,
+	.init_irq = m4_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = m4_init,
+	.init_early = msm8930_allocate_memory_regions,
+	.init_very_early = m4_early_memory,
+	.restart = msm_restart,
+MACHINE_END

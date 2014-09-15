@@ -19,6 +19,8 @@
 #include "kgsl_iommu.h"
 #include <mach/ocmem.h>
 
+#include "a3xx_reg.h"
+
 #define DEVICE_3D_NAME "kgsl-3d"
 #define DEVICE_3D0_NAME "kgsl-3d0"
 
@@ -416,6 +418,10 @@ static inline int adreno_add_read_cmds(struct kgsl_device *device,
 	*cmds++ = val;
 	*cmds++ = 0xFFFFFFFF;
 	*cmds++ = 0xFFFFFFFF;
+	
+	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
+	*cmds++ = 0;
+
 	cmds += __adreno_add_idle_indirect_cmds(cmds, nop_gpuaddr);
 	return cmds - start;
 }
@@ -442,5 +448,32 @@ void adreno_debugfs_init(struct kgsl_device *device);
 #else
 static inline void adreno_debugfs_init(struct kgsl_device *device) { }
 #endif
+static inline void adreno_set_protected_registers(struct kgsl_device *device,
+	unsigned int *index, unsigned int reg, int mask)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	unsigned int val;
+
+	unsigned int protect_reg_offset;
+
+	
+	BUG_ON(*index >= 16);
+
+	if (adreno_is_a3xx(adreno_dev)) {
+		val = 0x60000000 | ((mask & 0x1F) << 24) |
+			((reg << 2) & 0x1FFFF);
+		protect_reg_offset = A3XX_CP_PROTECT_REG_0;
+	} else  if (adreno_is_a2xx(adreno_dev)) {
+		val = 0xc0000000 | ((reg << 2) << 16) | (mask & 0xffff);
+		protect_reg_offset = REG_RBBM_PROTECT_0;
+	} else {
+		return;
+	}
+
+
+	kgsl_regwrite(device, protect_reg_offset + *index, val);
+	*index = *index + 1;
+}
+
 
 #endif 

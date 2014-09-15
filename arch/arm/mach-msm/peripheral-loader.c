@@ -429,13 +429,13 @@ void pil_put(void *peripheral_handle)
 	if (WARN(!pil->count, "%s: %s: Reference count mismatch\n",
 			pil->desc->name, __func__))
 		goto err_out;
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_VILLEC2
 	if (pil->count == 1)
 		goto unlock;
 #endif
 	if (!--pil->count)
 		pil_shutdown(pil);
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_VILLEC2
 unlock:
 #endif
 	mutex_unlock(&pil->lock);

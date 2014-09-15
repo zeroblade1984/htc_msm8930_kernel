@@ -1303,10 +1303,18 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy,
 					"created net attach done\n", wl->p2p->vir_ifname));
 				if (mode == WL_MODE_AP)
 					wl_set_drv_status(wl, CONNECTED, _ndev);
-				if (type == NL80211_IFTYPE_P2P_CLIENT)
+				if (type == NL80211_IFTYPE_P2P_CLIENT){
 					dhd_mode = DHD_FLAG_P2P_GC_MODE;
-				else if (type == NL80211_IFTYPE_P2P_GO)
+                    
+                    set_otg_clk(1);
+                    
+                }
+				else if (type == NL80211_IFTYPE_P2P_GO){
 					dhd_mode = DHD_FLAG_P2P_GO_MODE;
+                    
+                    set_otg_clk(1);
+                    
+                }
 				DNGL_FUNC(dhd_cfg80211_set_p2p_info, (wl, dhd_mode));
 #ifdef PROP_TXSTATUS_VSDB
 				if (dhd->plat_enable)
@@ -1374,6 +1382,9 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, bcm_struct_cfgdev *cfgdev)
 		WL_DBG(("P2P: GO_NEG_PHASE status cleared "));
 		wl_clr_p2p_status(wl, GO_NEG_PHASE);
 		if (wl->p2p->vif_created) {
+            
+            set_otg_clk(0);
+            
 			if (wl_get_drv_status(wl, SCANNING, dev)) {
 				wl_notify_escan_complete(wl, dev, true, true);
 			}
@@ -1962,6 +1973,7 @@ wl_get_valid_channels(struct net_device *ndev, u8 *valid_chan_list, s32 size)
 static bool first_broadcast_scan = TRUE;
 #endif 
 
+extern int mIs_screen_off;
 
 static s32
 wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
@@ -2037,6 +2049,11 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 			params->params.passive_time = FIRST_SCAN_PASSIVE_DWELL_TIME_MS;
 		}
 #endif 
+        if (mIs_screen_off) {
+            printf("Is Screen Off Scan");
+            params->params.active_time = 20;
+            params->params.passive_time = 40;
+        }
 		params->version = htod32(ESCAN_REQ_VERSION);
 		params->action =  htod16(action);
 		wl_escan_set_sync_id(params->sync_id, wl);
@@ -3355,6 +3372,25 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 		}
 #endif
 		WL_DBG(("setting wpa_auth to %d\n", val));
+
+#ifdef BCMCCX
+		if (val & (WPA_AUTH_CCKM|WPA2_AUTH_CCKM)) {
+			WL_DBG(("SET CCX enable\n"));
+			wldev_iovar_setint_bsscfg(dev, "okc_enable", 0, bssidx);
+			err = wldev_iovar_setint_bsscfg(dev, "ccx_enable", 1, bssidx);
+
+			if (unlikely(err)) {
+				WL_ERR(("could not set ccx_enable (%d)\n", err));
+				return err;
+			}
+		} else {
+			err = wldev_iovar_setint_bsscfg(dev, "ccx_enable", 0, bssidx);
+
+			if (unlikely(err)) {
+				WL_ERR(("could not set ccx_disable (%d)\n", err));
+			}
+		}
+#endif 
 
 
 		err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", val, bssidx);
@@ -13473,10 +13509,12 @@ static void wl_cfg80211_hotspot_event_process(struct net_device *ndev, const wl_
             if (status) {
                     printf("HIGH INDICATE!!\n");
                     wlan_lock_perf();
+                    set_otg_clk(1);
 					wlan_lock_multi_core(ndev);
             } else {
                     printf("LOW INDICATE!!\n");
 				    wlan_unlock_perf();
+                    set_otg_clk(0);
 					wlan_unlock_multi_core(ndev);
             }
 

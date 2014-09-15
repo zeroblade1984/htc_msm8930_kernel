@@ -355,32 +355,6 @@ int adreno_ringbuffer_start(struct adreno_ringbuffer *rb)
 			     rb->memptrs_desc.gpuaddr +
 			     GSL_RB_MEMPTRS_RPTR_OFFSET);
 
-	if (adreno_is_a3xx(adreno_dev)) {
-		
-		adreno_regwrite(device, A3XX_CP_PROTECT_CTRL, 0x00000007);
-
-		
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_0, 0x63000040);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_1, 0x62000080);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_2, 0x600000CC);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_3, 0x60000108);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_4, 0x64000140);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_5, 0x66000400);
-
-		
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_6, 0x65000700);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_7, 0x610007D8);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_8, 0x620007E0);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_9, 0x61001178);
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_A, 0x64001180);
-
-		
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_B, 0x60003300);
-
-		
-		adreno_regwrite(device, A3XX_CP_PROTECT_REG_C, 0x6B00C000);
-	}
-
 	if (adreno_is_a2xx(adreno_dev)) {
 		
 		adreno_regwrite(device, REG_CP_INT_ACK, 0xFFFFFFFF);

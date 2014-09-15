@@ -2544,7 +2544,7 @@ static int a3xx_rb_init(struct adreno_device *adreno_dev,
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
 	
-	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
+	GSL_RB_WRITE(cmds, cmds_gpu, 0x20000000);
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
 
@@ -2602,9 +2602,16 @@ static void a3xx_err_callback(struct adreno_device *adreno_dev, int bit)
 	case A3XX_INT_CP_HW_FAULT:
 		err = "ringbuffer hardware fault";
 		break;
-	case A3XX_INT_CP_REG_PROTECT_FAULT:
-		err = "ringbuffer protected mode error interrupt";
-		break;
+	case A3XX_INT_CP_REG_PROTECT_FAULT: {
+		unsigned int reg;
+		kgsl_regread(device, A3XX_CP_PROTECT_STATUS, &reg);
+
+		KGSL_DRV_CRIT(device,
+			"CP | Protected mode error| %s | addr=%x\n",
+			reg & (1 << 24) ? "WRITE" : "READ",
+			(reg & 0x1FFFF) >> 2);
+		return;
+	}
 	case A3XX_INT_CP_AHB_ERROR_HALT:
 		err = "ringbuffer AHB error interrupt";
 		break;
@@ -3120,6 +3127,40 @@ static void a3xx_perfcounter_init(struct adreno_device *adreno_dev)
 			NULL, PERFCOUNTER_FLAG_KERNEL);
 }
 
+static void a3xx_protect_init(struct kgsl_device *device)
+{
+	int index = 0;
+
+	
+	kgsl_regwrite(device, A3XX_CP_PROTECT_CTRL, 0x00000007);
+
+	
+	adreno_set_protected_registers(device, &index, 0x18, 0);
+	adreno_set_protected_registers(device, &index, 0x20, 2);
+	adreno_set_protected_registers(device, &index, 0x33, 0);
+	adreno_set_protected_registers(device, &index, 0x42, 0);
+	adreno_set_protected_registers(device, &index, 0x50, 4);
+	adreno_set_protected_registers(device, &index, 0x63, 0);
+	adreno_set_protected_registers(device, &index, 0x100, 4);
+
+	
+	adreno_set_protected_registers(device, &index, 0x1C0, 5);
+	adreno_set_protected_registers(device, &index, 0x1EC, 1);
+	adreno_set_protected_registers(device, &index, 0x1F6, 1);
+	adreno_set_protected_registers(device, &index, 0x1F8, 2);
+	adreno_set_protected_registers(device, &index, 0x45E, 2);
+	adreno_set_protected_registers(device, &index, 0x460, 4);
+
+	
+	adreno_set_protected_registers(device, &index, 0xCC0, 0);
+
+	
+	adreno_set_protected_registers(device, &index, 0x3000, 6);
+
+	
+	adreno_set_protected_registers(device, &index, 0x4000, 14);
+
+}
 static void a3xx_start(struct adreno_device *adreno_dev)
 {
 	struct kgsl_device *device = &adreno_dev->dev;
@@ -3179,6 +3220,10 @@ static void a3xx_start(struct adreno_device *adreno_dev)
 		adreno_regwrite(device, A3XX_RB_GMEM_BASE_ADDR,
 			(unsigned int)(adreno_dev->ocmem_base >> 14));
 	}
+
+
+	
+	a3xx_protect_init(device);
 
 	
 	adreno_regwrite(device, A3XX_RBBM_PERFCTR_CTL, 0x01);

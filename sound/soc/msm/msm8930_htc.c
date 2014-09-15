@@ -378,12 +378,16 @@ static void msm8930_ext_spk_power_amp_on(u32 spk)
 		}
 
 		msm8930_hs_pamp |= spk;
-		pr_info("hs amp on++");
-		htc_audio_gpio.amp_headset(true);
-		pr_info("hs amp on--");
-		pr_debug("%s: slepping 4 ms after turning on external "
-			" Bottom Speaker Ampl\n", __func__);
-		usleep_range(4000, 4000);
+
+		if ((msm8930_hs_pamp & HS_AMP_POS) &&
+			(msm8930_hs_pamp & HS_AMP_NEG)) {
+			pr_info("hs amp on++");
+			htc_audio_gpio.amp_headset(true);
+			pr_info("hs amp on--");
+			pr_debug("%s: slepping 4 ms after turning on external "
+				" Bottom Speaker Ampl\n", __func__);
+			usleep_range(4000, 4000);
+		}
 	} else if (spk & (BOTTOM_SPK_AMP_POS | BOTTOM_SPK_AMP_NEG)) {
 		if ((msm8930_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_POS) &&
 			(msm8930_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_NEG)) {
@@ -446,18 +450,21 @@ static void msm8930_ext_spk_power_amp_off(u32 spk)
 			" Speaker Ampl\n", __func__);
 		usleep_range(4000, 4000);
 	} else if (spk & (HS_AMP_POS | HS_AMP_NEG)) {
-		if (!msm8930_hs_pamp)
+
+		msm8930_hs_pamp &= ~spk;
+
+		if (0==(msm8930_hs_pamp&(HS_AMP_POS|HS_AMP_NEG))) {
 			return;
+		}
 
 		pr_info("hs amp off++");
 		htc_audio_gpio.amp_headset(false);
 		pr_info("hs amp off--");
 
-		msm8930_hs_pamp = 0;
-
 		pr_debug("%s: sleeping 4 ms after turning off external Bottom"
 			" Speaker Ampl\n", __func__);
 		usleep_range(4000, 4000);
+
 	} else if (spk & (BOTTOM_SPK_AMP_POS | BOTTOM_SPK_AMP_NEG)) {
 		if (!msm8930_ext_bottom_spk_pamp)
 			return;

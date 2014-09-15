@@ -289,7 +289,7 @@ void die(const char *str, struct pt_regs *regs, int err)
 	if(ramdump_source != RAMDUMP_BUG)
 	{
 		if(ramdump_source != RAMDUMP_UNKNOWN_INST)
-			sprintf(ramdump_buf, "%.*s", TASK_COMM_LEN, thread->task->comm);
+			snprintf(ramdump_buf, sizeof(ramdump_buf), "%.*s", TASK_COMM_LEN, thread->task->comm);
 		strcat(ramdump_buf, " PC:");
 		sprint_symbol(temp_buf,
 				(unsigned long)__builtin_extract_return_addr((void *)instruction_pointer(regs)) );

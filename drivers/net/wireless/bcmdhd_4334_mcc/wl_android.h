@@ -55,7 +55,7 @@ int wifi_set_power(int on, unsigned long msec);
 int wifi_get_mac_addr(unsigned char *buf);
 void *wifi_get_country_code(char *ccode);
 #endif 
-
+void set_otg_clk(int lock);
 #ifdef WL_GENL
 typedef struct bcm_event_hdr {
 	u16 event_type;
