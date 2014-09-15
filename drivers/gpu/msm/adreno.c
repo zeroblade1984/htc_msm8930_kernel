@@ -480,15 +480,13 @@ static void adreno_cleanup_pt(struct kgsl_device *device,
 
 	kgsl_mmu_unmap(pagetable, &device->memstore);
 
-	kgsl_mmu_unmap(pagetable, &adreno_dev->pwron_fixup);
-
 	kgsl_mmu_unmap(pagetable, &device->mmu.setstate_memory);
 }
 
 static int adreno_setup_pt(struct kgsl_device *device,
 			struct kgsl_pagetable *pagetable)
 {
-	int result;
+	int result = 0;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 
@@ -504,20 +502,13 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	if (result)
 		goto unmap_memptrs_desc;
 
-	result = kgsl_mmu_map_global(pagetable, &adreno_dev->pwron_fixup);
-	if (result)
-		goto unmap_memstore_desc;
-
 	result = kgsl_mmu_map_global(pagetable, &device->mmu.setstate_memory);
 	if (result)
-		goto unmap_pwron_fixup_desc;
+		goto unmap_memstore_desc;
 
 	device->mh.mpu_range = device->mmu.setstate_memory.gpuaddr +
 				device->mmu.setstate_memory.size;
 	return result;
-
-unmap_pwron_fixup_desc:
-	kgsl_mmu_unmap(pagetable, &adreno_dev->pwron_fixup);
 
 unmap_memstore_desc:
 	kgsl_mmu_unmap(pagetable, &device->memstore);
@@ -1480,11 +1471,6 @@ static int adreno_start(struct kgsl_device *device)
 
 	
 	kgsl_pwrctrl_enable(device);
-
-	
-
-	
-	set_bit(ADRENO_DEVICE_PWRON, &adreno_dev->priv);
 
 	
 	if (adreno_is_a2xx(adreno_dev)) {
@@ -2920,9 +2906,6 @@ struct kgsl_memdesc *adreno_find_region(struct kgsl_device *device,
 	if (kgsl_gpuaddr_in_memdesc(&device->memstore, gpuaddr, size))
 		return &device->memstore;
 
-	if (kgsl_gpuaddr_in_memdesc(&adreno_dev->pwron_fixup, gpuaddr, size))
-		return &adreno_dev->pwron_fixup;
-
 	if (kgsl_gpuaddr_in_memdesc(&device->mmu.setstate_memory, gpuaddr,
 					size))
 		return &device->mmu.setstate_memory;
@@ -3187,6 +3170,9 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 				(kgsl_readtimestamp(device, context,
 				KGSL_TIMESTAMP_RETIRED) + 1),
 				curr_global_ts + 1);
+			kgsl_context_put(context);
+			context = NULL;
+			curr_context = NULL;
 			return 1;
 		}
 
@@ -3222,6 +3208,8 @@ unsigned int adreno_ft_detect(struct kgsl_device *device,
 						curr_context->ib_gpu_time_used =
 								0;
 						kgsl_context_put(context);
+						context = NULL;
+						curr_context = NULL;
 						return 1;
 					}
 				}

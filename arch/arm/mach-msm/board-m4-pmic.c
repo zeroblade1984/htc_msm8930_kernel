@@ -458,6 +458,7 @@ static struct pm8921_bms_platform_data pm8921_bms_pdata __devinitdata = {
 	.store_batt_data_soc_thre	= 100,
 	.criteria_sw_est_ocv    = 86400000, 
 	.rconn_mohm_sw_est_ocv  = 10,
+	.qb_mode_cc_criteria_uAh = 10000,
 };
 
 static struct pm8xxx_vibrator_platform_data pm8xxx_vib_pdata = {

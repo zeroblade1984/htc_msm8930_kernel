@@ -81,7 +81,7 @@
 #include <mach/msm_xo.h>
 #include <mach/restart.h>
 
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include <mach/ion.h>
 #include <mach/mdm2.h>
 #include <mach/msm_rtb.h>
@@ -141,12 +141,6 @@ static struct platform_device msm_fm_platform_init = {
 	.name = "iris_fm",
 	.id   = -1,
 };
-
-#if 0
-#define KS8851_RST_GPIO		89
-#define KS8851_IRQ_GPIO		90
-#define HAP_SHIFT_LVL_OE_GPIO	47
-#endif
 
 #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
 
@@ -376,6 +370,7 @@ static struct ion_cp_heap_pdata cp_mm_msm8930_ion_pdata = {
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
+	.no_nonsecure_alloc = 0,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_msm8930_ion_pdata = {
@@ -384,6 +379,7 @@ static struct ion_cp_heap_pdata cp_mfc_msm8930_ion_pdata = {
 	.reusable = 0,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_HIGH,
+	.no_nonsecure_alloc = 0,
 };
 static struct ion_co_heap_pdata co_msm8930_ion_pdata = {
 	.adjacent_mem_id = INVALID_HEAP_ID,
@@ -752,9 +748,8 @@ static int critical_alarm_voltage_mv[] = {3000, 3100, 3200, 3400};
 
 static struct htc_battery_platform_data htc_battery_pdev_data = {
 	.guage_driver = 0,
-	.chg_limit_active_mask = HTC_BATT_CHG_LIMIT_BIT_TALK |
-								HTC_BATT_CHG_LIMIT_BIT_NAVI,
-	.critical_low_voltage_mv = 3100,
+	.chg_limit_active_mask = HTC_BATT_CHG_LIMIT_BIT_TALK | HTC_BATT_CHG_LIMIT_BIT_NAVI,
+	.critical_low_voltage_mv = 3200,
 	.critical_alarm_vol_ptr = critical_alarm_voltage_mv,
 	.critical_alarm_vol_cols = sizeof(critical_alarm_voltage_mv) / sizeof(int),
 	.overload_vol_thr_mv = 4000,
@@ -790,6 +785,9 @@ static struct htc_battery_platform_data htc_battery_pdev_data = {
 	.igauge.store_battery_data = pm8921_bms_store_battery_data_emmc,
 	.igauge.store_battery_ui_soc = pm8921_bms_store_battery_ui_soc,
 	.igauge.get_battery_ui_soc = pm8921_bms_get_battery_ui_soc,
+	.igauge.enter_qb_mode = pm8921_bms_enter_qb_mode,
+	.igauge.exit_qb_mode = pm8921_bms_exit_qb_mode,
+	.igauge.qb_mode_pwr_consumption_check = pm8921_qb_mode_pwr_consumption_check,
 	.igauge.is_battery_temp_fault = pm8921_is_batt_temperature_fault,
 	.igauge.is_battery_full = pm8921_is_batt_full,
 	.igauge.get_attr_text = pm8921_gauge_get_attr_text,
