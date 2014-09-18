@@ -24,6 +24,9 @@
 #include <linux/cpu.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#ifdef CONFIG_USERSPACE_VOLTAGE_CONTROL
+#include <linux/debugfs.h>
+#endif
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -1498,10 +1501,32 @@ static unsigned int calculate_vdd_dig(struct acpu_level *tgt)
 }
 
 static bool enable_boost = false;
+module_param_named(boost, enable_boost, bool, 0755);
 static unsigned boost_uv = 25000;
+#ifdef CONFIG_USERSPACE_VOLTAGE_CONTROL
+unsigned int lower_uV = 0, higher_uV = 0;
+module_param(lower_uV, uint, 0755);
+module_param(higher_uV, uint, 0755);
+static unsigned long higher_khz_thres = 1134000;
+#define MAX_UV 	175
+#endif
+
 static unsigned int calculate_vdd_core(struct acpu_level *tgt)
 {
+#ifdef CONFIG_USERSPACE_VOLTAGE_CONTROL
+	unsigned int under_uV;
+
+	if (lower_uV > MAX_UV)
+		lower_uV = MAX_UV;
+	else if (higher_uV > MAX_UV)
+		higher_uV = MAX_UV;
+
+	under_uV = (tgt->speed.khz >= higher_khz_thres) ? higher_uV : lower_uV;
+
+	return tgt->vdd_core + (enable_boost ? boost_uv : 0) - (under_uV * 1000);
+#else
 	return tgt->vdd_core + (enable_boost ? boost_uv : 0);
+#endif
 }
 
 static int acpuclk_8960_set_rate(int cpu, unsigned long rate,
@@ -2186,6 +2211,64 @@ struct platform_device msm8930aa_device_perf_lock = {
 };
 #endif
 
+#ifdef CONFIG_USERSPACE_VOLTAGE_CONTROL
+#define VDD_MAX 	1300000
+#define VDD_MIN 	800000
+static int acpu_table_show(struct seq_file *m, void *unused)
+{
+	const struct acpu_level *level;
+	int under_uV, final_uV;
+
+	/* Print Headers */
+	seq_printf(m, "CPU(MHz)  VDD(mV)\n");
+
+	for (level = acpu_freq_tbl; level->speed.khz != 0; level++) {
+		if (!level->use_for_scaling)
+			continue;
+
+		/* Print CPU speed information */
+		seq_printf(m, "%7dMHz  ", level->speed.khz / 1000);
+
+		under_uV = (level->speed.khz >= higher_khz_thres) ? higher_uV : lower_uV;
+		final_uV = level->vdd_core + (enable_boost ? boost_uv : 0) - (under_uV * 1000);
+
+		if (final_uV > VDD_MAX)
+			final_uV = VDD_MAX;
+		else if (final_uV < VDD_MIN)
+			final_uV = VDD_MIN;
+
+		/* Print core voltage final information */
+		seq_printf(m, "%10dmV\n", final_uV / 1000);
+
+	}
+
+	return 0;
+}
+
+static int acpu_table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, acpu_table_show, inode->i_private);
+}
+
+static const struct file_operations acpu_table_fops = {
+	.open		= acpu_table_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+void __init krait_uv(void) {
+	static struct dentry *base_dir;
+
+	base_dir = debugfs_create_dir("krait_uv_info", NULL);
+	if (!base_dir)
+		return;
+
+	debugfs_create_file("acpu_table", S_IRUGO, base_dir, NULL,
+				&acpu_table_fops);
+}
+#endif
+
 static int __init acpuclk_8960_probe(struct platform_device *pdev)
 {
 	int cpu;
@@ -2221,6 +2304,9 @@ static int __init acpuclk_8960_probe(struct platform_device *pdev)
 		perflock_pdata.perf_floor = &msm8930_perflock_data;
 		perflock_pdata.perf_ceiling = &msm8930_cpufreq_ceiling_data;
 	}
+#endif
+#ifdef CONFIG_USERSPACE_VOLTAGE_CONTROL
+	krait_uv();
 #endif
 
 	return 0;

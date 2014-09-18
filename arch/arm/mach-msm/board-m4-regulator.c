@@ -442,10 +442,10 @@ msm8930_gpio_regulator_pdata[] __devinitdata = {
 };
 
 struct regulator_init_data msm8930_saw_regulator_core0_pdata =
-	
-	SAW_VREG_INIT(S5, "8038_s5",	       850000, 1300000);
+	/* Voltage Control points */
+	SAW_VREG_INIT(S5, "8038_s5",	       800000, 1300000);
 struct regulator_init_data msm8930_saw_regulator_core1_pdata =
-	SAW_VREG_INIT(S6, "8038_s6",	       850000, 1300000);
+	SAW_VREG_INIT(S6, "8038_s6",	       800000, 1300000);
 
 struct pm8xxx_regulator_platform_data
 msm8930_pm8038_regulator_pdata[] __devinitdata = {
