@@ -169,8 +169,11 @@ void m4_init_gpu(void)
 	
 
 	if (cpu_is_msm8930aa())
+#ifdef CONFIG_GPU_OVERCLOCK
+		kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 500000000;
+#else
 		kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 450000000;
-
+#endif
 	
 
 	if ((SOCINFO_VERSION_MAJOR(version) == 1) &&
