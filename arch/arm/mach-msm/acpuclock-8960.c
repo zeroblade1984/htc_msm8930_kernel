@@ -135,6 +135,12 @@ static int acpu_max_freq = 0;
 #define LVL_NOM	RPM_VREG_CORNER_NOMINAL
 #define LVL_HIGH	RPM_VREG_CORNER_HIGH
 
+#ifdef CONFIG_CPU_OVERCLOCK
+#define FREQ_TABLE_SIZE 45
+#else
+#define FREQ_TABLE_SIZE	30
+#endif
+
 enum scalables {
 	CPU0 = 0,
 	CPU1,
@@ -1043,6 +1049,14 @@ static struct acpu_level acpu_freq_tbl_8930aa_slow[] = {
 	{ 1, {  1296000, HFPLL, 1, 0, 0x30 }, L2(16), 1225000 },
 	{ 1, {  1350000, HFPLL, 1, 0, 0x32 }, L2(16), 1225000 },
 	{ 1, {  1404000, HFPLL, 1, 0, 0x34 }, L2(16), 1237500 },
+#ifdef CONFIG_CPU_OVERCLOCK
+	{ 1, {  1458000, HFPLL, 1, 0, 0x36 }, L2(16), 1237500 },
+	{ 1, {  1512000, HFPLL, 1, 0, 0x38 }, L2(16), 1250000 },
+	{ 1, {  1566000, HFPLL, 1, 0, 0x3A }, L2(16), 1250000 },
+	{ 1, {  1620000, HFPLL, 1, 0, 0x3C }, L2(16), 1262500 },
+	{ 1, {  1674000, HFPLL, 1, 0, 0x3E }, L2(16), 1262500 },
+	{ 1, {  1728000, HFPLL, 1, 0, 0x40 }, L2(16), 1275000 },
+#endif
 	{ 0, { 0 } }
 };
 
@@ -1068,6 +1082,14 @@ static struct acpu_level acpu_freq_tbl_8930aa_nom[] = {
 	{ 1, {  1296000, HFPLL, 1, 0, 0x30 }, L2(16), 1200000 },
 	{ 1, {  1350000, HFPLL, 1, 0, 0x32 }, L2(16), 1200000 },
 	{ 1, {  1404000, HFPLL, 1, 0, 0x34 }, L2(16), 1212500 },
+#ifdef CONFIG_CPU_OVERCLOCK
+	{ 1, {  1458000, HFPLL, 1, 0, 0x36 }, L2(16), 1212500 },
+	{ 1, {  1512000, HFPLL, 1, 0, 0x38 }, L2(16), 1225000 },
+	{ 1, {  1566000, HFPLL, 1, 0, 0x3A }, L2(16), 1225000 },
+	{ 1, {  1620000, HFPLL, 1, 0, 0x3C }, L2(16), 1237500 },
+	{ 1, {  1674000, HFPLL, 1, 0, 0x3E }, L2(16), 1237500 },
+	{ 1, {  1728000, HFPLL, 1, 0, 0x40 }, L2(16), 1250000 },
+#endif
 	{ 0, { 0 } }
 };
 
@@ -1093,6 +1115,14 @@ static struct acpu_level acpu_freq_tbl_8930aa_fast[] = {
 	{ 1, {  1296000, HFPLL, 1, 0, 0x30 }, L2(16), 1150000 },
 	{ 1, {  1350000, HFPLL, 1, 0, 0x32 }, L2(16), 1150000 },
 	{ 1, {  1404000, HFPLL, 1, 0, 0x34 }, L2(16), 1162500 },
+#ifdef CONFIG_CPU_OVERCLOCK
+	{ 1, {  1458000, HFPLL, 1, 0, 0x36 }, L2(16), 1162500 },
+	{ 1, {  1512000, HFPLL, 1, 0, 0x38 }, L2(16), 1187500 },
+	{ 1, {  1566000, HFPLL, 1, 0, 0x3A }, L2(16), 1187500 },
+	{ 1, {  1620000, HFPLL, 1, 0, 0x3C }, L2(16), 1200000 },
+	{ 1, {  1674000, HFPLL, 1, 0, 0x3E }, L2(16), 1200000 },
+	{ 1, {  1728000, HFPLL, 1, 0, 0x40 }, L2(16), 1225000 },
+#endif
 	{ 0, { 0 } }
 };
 #undef L2
@@ -1782,7 +1812,7 @@ static void __init bus_init(unsigned int init_bw)
 }
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][30];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
 
 static void __init cpufreq_table_init(void)
 {
