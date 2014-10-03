@@ -27,6 +27,9 @@
 #include <mach/htc_battery_core.h>
 #include <linux/android_alarm.h>
 #include <mach/board_htc.h>
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_WAKE_GESTURES
+#include <linux/synaptics_i2c_rmi.h>
+#endif
 #ifdef CONFIG_BLX
 #include <linux/blx.h>
 int soc_level, soc_flag;
@@ -85,7 +88,7 @@ static struct alarm batt_charger_ctrl_alarm;
 static struct work_struct batt_charger_ctrl_work;
 struct workqueue_struct *batt_charger_ctrl_wq;
 static unsigned int charger_ctrl_stat;
-static unsigned int phone_call_stat;
+unsigned int phone_call_stat;
 
 static int test_power_monitor;
 
